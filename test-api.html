@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test API Key</title>
+    <script src="https://esm.sh/@google/genai@^1.34.0"></script>
+</head>
+<body>
+    <h1>Probando API Key de Google</h1>
+    <div id="result"></div>
+    
+    <script>
+        async function testAPI() {
+            const result = document.getElementById('result');
+            result.innerHTML = '<p>Probando API Key...</p>';
+            
+            try {
+                const genAI = await import("https://esm.sh/@google/genai@^1.34.0");
+                const AI = new genAI.GoogleGenAI('AIzaSyAoYtOEDRHxupQ_4_Itc1Ugh4Z6OrWM3kE');
+                const model = AI.getGenerativeModel({ model: "gemini-3-flash-preview" });
+                
+                const response = await model.generateContent("Hola");
+                const text = response.response.text();
+                
+                result.innerHTML = `
+                    <h3>✅ API Key VÁLIDA</h3>
+                    <p>Respuesta: ${text}</p>
+                `;
+            } catch (error) {
+                result.innerHTML = `
+                    <h3>❌ Error en API Key</h3>
+                    <p>Error: ${error.message}</p>
+                    <p><strong>Posibles causas:</strong></p>
+                    <ul>
+                        <li>API Key inválida o expirada</li>
+                        <li>Cuota excedida</li>
+                        <li>Problema de red</li>
+                    </ul>
+                `;
+            }
+        }
+        
+        testAPI();
+    </script>
+</body>
+</html>
