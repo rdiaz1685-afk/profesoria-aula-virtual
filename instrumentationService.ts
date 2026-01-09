@@ -16,7 +16,7 @@ function cleanAndParseJson(text: string): any {
   if (!text) return null;
   let trimmed = text.trim();
   trimmed = trimmed.replace(/^```json/i, "").replace(/```$/i, "").trim();
-  
+
   try {
     return JSON.parse(trimmed);
   } catch (e) {
@@ -112,7 +112,10 @@ export async function generateInstrumentation(course: Course): Promise<DidacticI
       return {
         characterization: "Error de timeout en generación",
         didacticIntent: "Error de timeout en generación",
-        subjectCompetency: "Error de timeout en generación"
+        subjectCompetency: "Error de timeout en generación",
+        analysisByUnit: [],
+        evaluationMatrix: [],
+        calendar: []
       };
     }
     throw error;
