@@ -6,6 +6,7 @@ import { generateInstrumentationOpenAI } from './openaiService';
 import CourseForm from './components/CourseForm';
 import CourseViewer from './components/CourseViewer';
 import ThinkingCrow from './components/ThinkingCrow';
+import ConciliadorPanel from './components/ConciliadorPanel';
 
 const APP_VERSION = '2.9-chrome-fix';
 
@@ -15,6 +16,9 @@ function App() {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [courseToDelete, setCourseToDelete] = useState<Course | null>(null);
   const [genTimer, setGenTimer] = useState(0);
+  const [showSettings, setShowSettings] = useState(false);
+  const [appMode, setAppMode] = useState<string>('academy');
+  const [userApiKey, setUserApiKey] = useState(() => localStorage.getItem('profesoria_user_api_key') || "");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const saveTimeoutRef = useRef<any>(null);
@@ -200,6 +204,65 @@ function App() {
         </div>
       )}
 
+      {showSettings && (
+        <div className="fixed inset-0 z-[11000] bg-black/90 backdrop-blur-xl flex items-center justify-center p-6">
+          <div className="bg-slate-900 border border-white/10 p-10 rounded-[40px] max-w-lg w-full relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-cyan-500 to-transparent"></div>
+
+            <button onClick={() => setShowSettings(false)} className="absolute top-6 right-6 text-slate-500 hover:text-white text-2xl">×</button>
+
+            <div className="flex flex-col items-center text-center space-y-6">
+              <ThinkingCrow />
+              <h2 className="text-2xl font-black text-white uppercase tracking-tighter">Llave de Inteligencia</h2>
+              <p className="text-slate-400 text-xs leading-relaxed max-w-sm">
+                Para garantizar que el sistema siempre responda, te recomendamos usar tu propia llave de Google Gemini (es gratuita).
+              </p>
+
+              <div className="w-full space-y-4">
+                <input
+                  type="password"
+                  className="w-full p-5 rounded-2xl bg-black/40 border border-white/10 text-white text-center font-mono text-sm outline-none focus:border-cyan-500 transition-all"
+                  placeholder="PEGA TU API KEY AQUÍ"
+                  value={userApiKey}
+                  onChange={(e) => {
+                    const key = e.target.value.trim();
+                    setUserApiKey(key);
+                    localStorage.setItem('profesoria_user_api_key', key);
+                  }}
+                />
+
+                <div className="grid grid-cols-1 gap-2">
+                  <a
+                    href="https://aistudio.google.com/app/apikey"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="py-4 bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 rounded-2xl text-[9px] font-black uppercase tracking-widest hover:bg-cyan-500 hover:text-slate-950 transition-all"
+                  >
+                    1. Obtener Llave Gratis ➔
+                  </a>
+                  <button
+                    onClick={() => {
+                      setUserApiKey("");
+                      localStorage.removeItem('profesoria_user_api_key');
+                    }}
+                    className="py-4 text-slate-600 text-[8px] font-black uppercase tracking-widest hover:text-red-400 transition-colors"
+                  >
+                    Eliminar llave guardada
+                  </button>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-white/5 w-full">
+                <p className="text-[8px] text-slate-600 uppercase tracking-widest leading-loose">
+                  Tu llave se guarda únicamente en este navegador.<br />
+                  Nunca se comparte con otros usuarios.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {!teacher ? (
         <div className="h-full flex items-center justify-center p-6 bg-[#020617] relative overflow-hidden text-slate-200">
           {/* LUXURY BACKGROUND ELEMENTS */}
@@ -259,6 +322,8 @@ function App() {
       ) :
         currentCourse ? (
           <CourseViewer key={currentCourse.id} course={currentCourse} onExit={() => setCurrentCourse(null)} onUpdateCourse={handleUpdateCourse} />
+        ) : appMode === 'conciliador' ? (
+          <ConciliadorPanel />
         ) : (
           <div className="flex-1 flex flex-col overflow-hidden relative">
             {/* DYNAMIC BACKGROUND */}
@@ -286,6 +351,16 @@ function App() {
                   <button onClick={handleExport} className="px-6 py-4 rounded-3xl font-black uppercase text-[9px] tracking-widest text-slate-400 hover:bg-white/5">Exportar</button>
                   <button onClick={() => setShowForm(true)} className="px-10 py-4 bg-white text-slate-950 rounded-[28px] font-black uppercase text-[10px] tracking-widest hover:bg-cyan-400 transition-all active:scale-95 shadow-xl shadow-cyan-500/10 hover:shadow-cyan-500/30">
                     + Nueva Materia
+                  </button>
+                  <button onClick={() => setShowSettings(true)} className="w-12 h-12 flex items-center justify-center bg-slate-900 border border-white/10 rounded-full hover:border-cyan-500 transition-all text-xl" title="Configuración de IA">
+                    ⚙️
+                  </button>
+                  <button
+                    onClick={() => setAppMode(prev => prev === 'academy' ? 'conciliador' : 'academy')}
+                    className={`w-12 h-12 flex items-center justify-center border rounded-full transition-all text-xl ${appMode === 'conciliador' ? 'bg-emerald-500 border-emerald-400 text-slate-950' : 'bg-slate-900 border-white/10 hover:border-emerald-500'}`}
+                    title="Cambiar a Conciliador Pro"
+                  >
+                    {appMode === 'academy' ? '📊' : '🎓'}
                   </button>
                 </div>
               </div>

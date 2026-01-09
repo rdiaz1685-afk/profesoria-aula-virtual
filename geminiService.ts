@@ -2,7 +2,11 @@ import { UserPreferences, Course, Lesson, Unit, DidacticInstrumentation } from "
 
 // CAZADOR DE MODELOS MULTIMODAL (LEE TEXTO E IMÁGENES)
 export async function callGeminiDynamic(prompt: string, images?: string[]) {
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY?.trim().replace(/\s/g, '');
+  // Priorizar llave del usuario en localStorage, sino usar la de entorno
+  const userKey = localStorage.getItem('profesoria_user_api_key');
+  const envKey = import.meta.env.VITE_GEMINI_API_KEY?.trim().replace(/\s/g, '');
+  const apiKey = (userKey || envKey);
+
   if (!apiKey || apiKey === 'tu-api-key-aqui') throw new Error("API_KEY_MISSING");
 
   const candidates = [

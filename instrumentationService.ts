@@ -2,7 +2,9 @@ import { GoogleGenAI } from "@google/genai";
 import { Course, DidacticInstrumentation } from "./types";
 
 const getAiClient = () => {
-  const apiKey = 'AIzaSyAoYtOEDRHxupQ_4_Itc1Ugh4Z6OrWM3kE';
+  const userKey = localStorage.getItem('profesoria_user_api_key');
+  const envKey = 'AIzaSyAoYtOEDRHxupQ_4_Itc1Ugh4Z6OrWM3kE'; // Llave de respaldo
+  const apiKey = userKey || envKey;
   return new GoogleGenAI({ apiKey });
 };
 
