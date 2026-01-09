@@ -1,12 +1,39 @@
-
 import React, { useState } from 'react';
-import { Transaction, performConciliation, cleanAmount } from '../conciliadorService';
+import * as XLSX from 'xlsx';
+import { Transaction, performConciliation, cleanAmount } from './conciliadorService';
 
-const ConciliadorPanel = () => {
+const App = () => {
     const [innovatData, setInnovatData] = useState<Transaction[]>([]);
     const [bancoData, setBancoData] = useState<Transaction[]>([]);
     const [results, setResults] = useState<any>(null);
     const [isProcessing, setIsProcessing] = useState(false);
+
+    const exportToExcel = (data: any) => {
+        if (!data) return;
+
+        const worksheetData = [
+            ["ID Innovat", "Nombre Innovat", "Monto Innovat", "Fecha Banco", "Confianza", "Status"],
+            ...data.matches.map((m: any) => [
+                m.a.id,
+                m.a.name,
+                m.a.amount,
+                m.b.date,
+                m.confidence + "%",
+                m.confidence === 100 ? "Conciliado" : "Sugerido"
+            ]),
+            [],
+            ["Solo en Innovat", "", "Importe"],
+            ...data.onlyInnovat.map((t: any) => [t.id, t.name, t.amount]),
+            [],
+            ["Solo en Banco", "", "Importe"],
+            ...data.onlyBanco.map((t: any) => [t.id, t.name, t.amount])
+        ];
+
+        const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Conciliación");
+        XLSX.writeFile(workbook, `Conciliacion_Diciembre_${Date.now()}.xlsx`);
+    };
 
     // Simulador de carga de archivos (Pronto lo conectaremos a tu CSV real)
     const handleFileUpload = (e: any, type: 'innovat' | 'banco') => {
@@ -17,24 +44,51 @@ const ConciliadorPanel = () => {
         reader.onload = (event) => {
             const text = event.target?.result as string;
             const lines = text.split('\n');
+            console.log(`Analizando ${lines.length} líneas del archivo...`);
 
-            const processed: Transaction[] = lines.map((line, idx) => {
-                const parts = line.split(',');
-                // Lógica simplificada basada en tu archivo:
-                // Fecha[0], Nombre[1], Clave[2], Monto[3]
-                if (parts.length < 4) return null;
+            const processed: Transaction[] = lines.map((line) => {
+                const parts = line.split(',').map(p => p.trim());
+
+                // BUSCADOR INTELIGENTE DE DATOS: 
+                // No dependemos de la columna, buscamos patrones en toda la fila.
+
+                // 1. Buscar algo que parezca una FECHA (DD/MM/YYYY)
+                const dateIdx = parts.findIndex(p => /\d{1,2}\/\d{1,2}\/\d{4}/.test(p));
+                if (dateIdx === -1) return null;
+
+                // 2. Buscar algo que parezca un MONTO (Que tenga $ o números con decimales)
+                // Buscamos la primera parte que después de limpiar tenga un valor > 0
+                let amount = 0;
+                let amountIdx = -1;
+
+                for (let i = 0; i < parts.length; i++) {
+                    const val = cleanAmount(parts[i]);
+                    if (val > 0 && i !== dateIdx) { // Evitamos confundir Claves con Montos si es posible
+                        amount = val;
+                        amountIdx = i;
+                        break;
+                    }
+                }
+
+                if (amount <= 0) return null;
+
+                // 3. Buscar Nombre e ID (Basado en lo que sobra)
+                // Normalmente el nombre es la parte más larga y el ID es un número corto
+                const namePart = parts.find(p => p.length > 10 && !p.includes('/')) || "S/N";
+                const idPart = parts.find(p => p.length >= 4 && p.length <= 8 && !isNaN(Number(p.replace(/\D/g, "")))) || "S/R";
 
                 return {
-                    date: parts[0],
-                    name: parts[1],
-                    id: parts[2],
-                    amount: cleanAmount(parts[3]),
+                    date: parts[dateIdx],
+                    name: namePart,
+                    id: idPart,
+                    amount: amount,
                     source: type,
                     status: 'pending',
                     originalLine: line
                 };
-            }).filter(x => x && x.amount > 0) as Transaction[];
+            }).filter(x => x !== null) as Transaction[];
 
+            console.log(`✅ Procesados ${processed.length} registros válidos.`);
             if (type === 'innovat') setInnovatData(processed);
             else setBancoData(processed);
         };
@@ -138,22 +192,35 @@ const ConciliadorPanel = () => {
                             </div>
 
                             <div className="bg-slate-900/50 rounded-[40px] border border-white/5 p-8">
-                                <h3 className="text-xs font-black uppercase tracking-widest mb-8">Detalle de Conciliación</h3>
+                                <div className="flex justify-between items-center mb-8">
+                                    <h3 className="text-xs font-black uppercase tracking-widest">Detalle de Conciliación</h3>
+                                    <button
+                                        onClick={() => exportToExcel(results)}
+                                        className="px-6 py-3 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-2xl text-[9px] font-black uppercase tracking-widest hover:bg-emerald-500 hover:text-slate-950 transition-all"
+                                    >
+                                        ⬇ Descargar Excel
+                                    </button>
+                                </div>
                                 <div className="space-y-4 max-h-[600px] overflow-y-auto pr-4 custom-scrollbar">
                                     {results.matches.map((m: any, idx: number) => (
-                                        <div key={idx} className="flex items-center gap-4 p-4 bg-black/40 rounded-2xl border border-white/5 hover:border-emerald-500/20 transition-all">
+                                        <div key={idx} className={`flex items-center gap-4 p-4 bg-black/40 rounded-2xl border transition-all ${m.confidence === 100 ? 'border-emerald-500/20 hover:border-emerald-500/40' : 'border-amber-500/20 hover:border-amber-500/40'}`}>
                                             <div className="flex-1">
                                                 <p className="text-[9px] font-black text-slate-500 uppercase tracking-tighter">Innovat: {m.a.id}</p>
                                                 <p className="text-sm font-bold text-white truncate">{m.a.name}</p>
                                             </div>
-                                            <div className="w-20 text-center">
-                                                <span className="text-[10px] font-black text-emerald-500 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
-                                                    {m.confidence}%
+                                            <div className="w-24 text-center">
+                                                <span className={`text-[9px] font-black px-4 py-1.5 rounded-full border ${m.confidence === 100
+                                                    ? 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20'
+                                                    : 'text-amber-500 bg-amber-500/10 border-amber-500/20'
+                                                    }`}>
+                                                    {m.confidence === 100 ? 'EXACTO 100%' : ' REVISAR ' + m.confidence + '%'}
                                                 </span>
                                             </div>
                                             <div className="flex-1 text-right">
                                                 <p className="text-[9px] font-black text-slate-500 uppercase tracking-tighter">Banco: {m.b.date}</p>
-                                                <p className="text-sm font-black text-emerald-400">${m.a.amount.toLocaleString()}</p>
+                                                <p className={`text-sm font-black ${m.confidence === 100 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                                                    ${m.a.amount.toLocaleString()}
+                                                </p>
                                             </div>
                                         </div>
                                     ))}
@@ -167,4 +234,4 @@ const ConciliadorPanel = () => {
     );
 };
 
-export default ConciliadorPanel;
+export default App;

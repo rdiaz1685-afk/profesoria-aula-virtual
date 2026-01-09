@@ -6,7 +6,6 @@ import { generateInstrumentationOpenAI } from './openaiService';
 import CourseForm from './components/CourseForm';
 import CourseViewer from './components/CourseViewer';
 import ThinkingCrow from './components/ThinkingCrow';
-import ConciliadorPanel from './components/ConciliadorPanel';
 
 const APP_VERSION = '2.9-chrome-fix';
 
@@ -17,7 +16,6 @@ function App() {
   const [courseToDelete, setCourseToDelete] = useState<Course | null>(null);
   const [genTimer, setGenTimer] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
-  const [appMode, setAppMode] = useState<string>('academy');
   const [userApiKey, setUserApiKey] = useState(() => localStorage.getItem('profesoria_user_api_key') || "");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -322,8 +320,6 @@ function App() {
       ) :
         currentCourse ? (
           <CourseViewer key={currentCourse.id} course={currentCourse} onExit={() => setCurrentCourse(null)} onUpdateCourse={handleUpdateCourse} />
-        ) : appMode === 'conciliador' ? (
-          <ConciliadorPanel />
         ) : (
           <div className="flex-1 flex flex-col overflow-hidden relative">
             {/* DYNAMIC BACKGROUND */}
@@ -354,13 +350,6 @@ function App() {
                   </button>
                   <button onClick={() => setShowSettings(true)} className="w-12 h-12 flex items-center justify-center bg-slate-900 border border-white/10 rounded-full hover:border-cyan-500 transition-all text-xl" title="Configuración de IA">
                     ⚙️
-                  </button>
-                  <button
-                    onClick={() => setAppMode(prev => prev === 'academy' ? 'conciliador' : 'academy')}
-                    className={`w-12 h-12 flex items-center justify-center border rounded-full transition-all text-xl ${appMode === 'conciliador' ? 'bg-emerald-500 border-emerald-400 text-slate-950' : 'bg-slate-900 border-white/10 hover:border-emerald-500'}`}
-                    title="Cambiar a Conciliador Pro"
-                  >
-                    {appMode === 'academy' ? '📊' : '🎓'}
                   </button>
                 </div>
               </div>
